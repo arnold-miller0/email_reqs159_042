@@ -1,0 +1,143 @@
+Email application system and requirements
+
+Workflow:
+Person <-> Email-UI <-> Backend-Application 
+ Backend-Application <-> Personal-Database
+ Backend-Application -> Out-Bound-Mail-Server
+
+In-Bound-Mail-Server ->  Backend Application ->  Out-Bound-Mail-Server
+ Backend-Application <-> Personal-Database
+ Backend-Application -> Out-Bound-Mail-Server
+ 
+
+Backend Application: handles all communication between Email-UI, Servers, Databa
+
+Personal-Database: contains address book, email settings, calendar entries, list of received and sent email.
+
+In-Bound-Mail-Server: Incomming mail on the Server triggers Backend-Application actions
+
+ Out-Bound-Mail-Server: Backend sernds outgoing mail to out-bound Server
+'
+
+Req_159: Email shall be sent to any valid email address from To, Cc, and/or Bcc address lines
+
+Req_42: All email addresses identified as spam by the user shall be automatically sent to the spam folder
+
+Write test procedure(s) to test the requirements presented
+- Identify test approach, structure, and steps
+- Format of test procedure not important, text file is fine
+- If familiar with Cucumber, write the appropriate Feature file(s)
+- Document assumptions
+
+Email format (address) Assumption:
+Email address are case in sensitive, so the same Email address is in lower-case, upper-case or mix-case
+Valid Email format based on via https://help.xmatters.com/ondemand/trial/valid_email_format.htm
+The prefix appears to the left of the @ symbol.
+The domain appears to the right of the @ symbol.
+For example, in the address example@mail.com, "example" is the email prefix, and "mail.com" is the email domain.
+Acceptable email prefix formats
+Allowed characters: letters (a-z), numbers, underscores, periods, pluses, and dashes
+An underscore, period, plus or dash must be followed by one or more letter or number.
+Acceptable email domain formats
+    Allowed characters: letters, numbers, dashes.
+    The last portion of the domain must be at least two characters, for example: .com, .org, .cc
+
+
+Backend-Application Assumption (Design and test):
+Able recieve Email-UI message with Subject, From-Address, To-Addresses, CC-Addresses, BCC-Addresses, Body 
+able to trap Email-UI message response
+From-Address is always a valid email address and lowercase in in Personal-Database User-Address List
+Able to trap sent Email-UI message with Subject, From-Address, To-Addresses, CC-Addresses, Body 
+Able to trap output to Out-Bound-Mail-Server (Subject, From-Address, To-Address, CC-Addresses, Body)
+Able trigger In-Bound-Mail-Server with Subject, From-Address, To-Address,
+CC-Addresses, Body
+- Note: To, CC, Addresses are csv list with CC and BCC maybe empty
+
+test postive Req_159: Email shall be sent to any valid email address from To, Cc, and/or Bcc address lines
+Backend-Application response to recieve Email-UI message with Success 
+- and send Email to Out-Bound-Mail-Server (Subject, From-Address, To-Address, CC-Addresses, Body)
+  - one email to Out-Bound-Mail-Server for each unique lowercase address (To, CC, BCC) with
+    - Out-Bound Subject, Body is recieved Email-UI Subject, Body
+    - Out-Bound From-Address is recieved Email-UI lowercase From-Address 
+    - Out-Bound To-Address is recieved Email-UI unique lowercase address
+    - when unique lowercase Address not in recieved Email-UI CC-Addresses
+      - then Out-Bound CC-Addresses is recieved Email-UI unique lowercase CC-Addresses 
+      - otherwise Out-Bound unqiue lowercase CC-Addresses without unique lowercase address
+- and add Personal-Database From-Address success sent-email with subject, To-Addresses, CC-Addresses, BCC-Addresses 
+when message has
+- non-empty Subject, Body and To-Addresses
+- each email in To-Addresses, CC-Addresses, BCC-Addresses are valid
+
+test negative Req_159: Email shall be sent to any valid email address from To, Cc, and/or Bcc address lines
+Backend-Application response to Email-UI message with Failure and reason
+- reasons include:
+  - empty Subject, Body and To-Addresses
+  - invalid To-Addresses, CC-Addresses, BCC-Addresses
+- and add Personal-Database From-Address failure sent-email with subject, To-Addresses, CC-Addresses, BCC-Addresses, reason
+When Trigger has empty Subject, Body or To-Addresses, 
+  - or invalid email found in To-Addresses, CC-Addresses, BCC-Addresses
+
+test postive  Req_42: All email addresses identified as spam by the user shall be automatically sent to the spam folder
+test negative Req_42: All email addresses not identified as spam by the user shall be automatically sent to the input folder
+Backend-Application action In-Bound-Mail-Server trigger email and 
+- send email-ui input message (Subject, From-Address, To-Address, CC-Addresses, Body, Folder) to Email-UI
+  - email-ui message Subject, Body is In-bound-email Subject, Body
+  - email-ui message From-Address is In-bound-email lower-case From-Address
+  - email-ui message To-Address is In-bound-email lower-case To-Address
+  - email-ui message CC-Addresses is In-bound-email unique lower-case CC-Addresses without lower-case To-Address 
+  - when From-Address is not found in Personal-Database Spam User-Address list
+    - email-ui message Folder is input
+    - and add Personal-Database To-Address trigger In-bound-email with Subject, From-Address, CC-Addresses, Input in Database
+  - otherwise (From-Address is found in Personal-Database Spam User-Address list)
+    - email-ui message Folder is Spam
+    - and add Personal-Database To-Address trigger In-bound-email with subject, From-Address, CC-Addresses, Spam in Database
+when trigger has
+- non-empty Subject, Body, To-Address, From-Address
+- each email in From-Address, To-Address, CC-Addresses are valid
+- To-Address is a User-Address in Personal-Database
+
+Not Testing
+Backend-Application action In-Bound-Mail-Server trigger failure and reason
+- reasons include:
+  - empty Subject, Body and To-Address, From-Address
+  - found invalid To-Address,  From-Address, CC-Addresses
+- and add Personal-Database To-Address trigger In-bound-email failure with subject, From-Address, To-Address, CC-Addresses, reason
+When Trigger has empty Subject, Body From-Address, To-Address, 
+  - or invalid email found in To-Address, CC-Addresses
+  - or To-Address is not a User-Address in Personal-Database
+
+Backend-Application DONE
+
+
+Personal Database Assumption (Design and not test)
+has valid lowercase emails User-Address List
+for each User-Address has Spam (maybe empty) List - all are valid lowercase emails
+has API message to add valid email to the User-Address Spam list
+- When User-Address or add-email is not valid, 
+  then return failure and reason
+- When lowercase add-email already in User-Address Spam list, 
+  then return success
+- When lowercase add-email not in User-Address Spam list, 
+  then add to User-Address Spam list 
+  and return success
+has API message to remove valid email from the User-Address Spam list
+- When User-Address or remove-email is not valid, 
+  then return failure and reason
+- When lowercase remove-email already in User-Address Spam list, 
+  then remove from User-Address Spam list 
+  and return success
+- When lowercase remove-email not in User-Address Spam list, 
+  then return success
+
+has In-Bound-Mail-Server trigger email process record with
+ subject, From-Address, To-Address, CC-Addresses, Success (folder) or Failure (Reason), date-time-stamp
+ - Note: folder is input or spam
+ - Note: Reason is failure reason
+ - Note: From, To, CC address are lowercase via trigger
+
+has recieve Email-UI message process record with
+  subject, From-Address, To-Addresses, CC-Addresses, BCC-Addresses, Success or Failure (Reason), date-time-stamp
+ -  Note: Reason is failure reason
+- Note: From, To, CC, BCC address are lowercase via message
+
+Personal Database DONE
